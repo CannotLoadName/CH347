@@ -1,77 +1,48 @@
-import ctypes
-from .util import LIBRARY
-class SPI_CONFIG(ctypes.Structure):
-    _fields_=[
-        ("iMode",ctypes.c_ubyte),
-        ("iClock",ctypes.c_ubyte),
-        ("iByteOrder",ctypes.c_ubyte),
-        ("iSpiWriteReadInterval",ctypes.c_ushort),
-        ("iSpiOutDefaultData",ctypes.c_ubyte),
-        ("iChipSelect",ctypes.c_ulong),
-        ("CS1Polarity",ctypes.c_ubyte),
-        ("CS2Polarity",ctypes.c_ubyte),
-        ("iIsAutoDeativeCS",ctypes.c_ushort),
-        ("iActiveDelay",ctypes.c_ushort),
-        ("iDelayDeactive",ctypes.c_ulong)
-    ]
-def CH347SPI_Init(iIndex:int=0,iMode:int=3,iClock:int=1,iByteOrder:bool=False,iSpiWriteReadInterval:int=65280,iSpiOutDefaultData:int=0,iChipSelect:int=0,CS1Polarity:bool=False,CS2Polarity:bool=False,iIsAutoDeativeCS:int=0,iActiveDelay:int=0,iDelayDeactive:int=0)->bool:
-    if LIBRARY.CH347SPI_Init(ctypes.c_ulong(iIndex),ctypes.byref(SPI_CONFIG(iMode,iClock,1 if iByteOrder else 0,iSpiWriteReadInterval,iSpiOutDefaultData,iChipSelect,1 if CS1Polarity else 0,1 if CS2Polarity else 0,iIsAutoDeativeCS,iActiveDelay,iDelayDeactive))):
-        return True
-    else:
-        return False
-def CH347SPI_SetDataBits(iIndex:int=0,iDataBits:bool=False)->bool:
-    if LIBRARY.CH347SPI_SetDataBits(ctypes.c_ulong(iIndex),ctypes.c_ubyte(1 if iDataBits else 0)):
-        return True
-    else:
-        return False
-def CH347SPI_GetCfg(iIndex:int=0)->dict:
+#-*-coding:utf-8;-*-
+from ctypes import byref,c_ubyte,c_ulong
+from .core import LIBRARY,SPI_CONFIG
+def CH347SPI_Init(iIndex:int,iMode:int,iClock:int,iByteOrder:int,iSpiWriteReadInterval:int,iSpiOutDefaultData:int,iChipSelect:int,CS1Polarity:int,CS2Polarity:int,iIsAutoDeativeCS:int,iActiveDelay:int,iDelayDeactive:int)->bool:
+    SpiCfg=SPI_CONFIG(iMode,iClock,iByteOrder,iSpiWriteReadInterval,iSpiOutDefaultData,iChipSelect,CS1Polarity,CS2Polarity,iIsAutoDeativeCS,iActiveDelay,iDelayDeactive)
+    return LIBRARY.CH347SPI_Init(iIndex,byref(SpiCfg))
+CH347SPI_SetFrequency=LIBRARY.CH347SPI_SetFrequency
+CH347SPI_SetDataBits=LIBRARY.CH347SPI_SetDataBits
+def CH347SPI_GetCfg(iIndex:int)->dict:
     SpiCfg=SPI_CONFIG()
-    if LIBRARY.CH347SPI_GetCfg(ctypes.c_ulong(iIndex),ctypes.byref(SpiCfg)):
+    if LIBRARY.CH347SPI_GetCfg(iIndex,byref(SpiCfg)):
         return {
             "iMode":SpiCfg.iMode,
             "iClock":SpiCfg.iClock,
-            "iByteOrder":True if SpiCfg.iByteOrder else False,
+            "iByteOrder":SpiCfg.iByteOrder,
             "iSpiWriteReadInterval":SpiCfg.iSpiWriteReadInterval,
             "iSpiOutDefaultData":SpiCfg.iSpiOutDefaultData,
             "iChipSelect":SpiCfg.iChipSelect,
-            "CS1Polarity":True if SpiCfg.CS1Polarity else False,
-            "CS2Polarity":True if SpiCfg.CS2Polarity else False,
+            "CS1Polarity":SpiCfg.CS1Polarity,
+            "CS2Polarity":SpiCfg.CS2Polarity,
             "iIsAutoDeativeCS":SpiCfg.iIsAutoDeativeCS,
             "iActiveDelay":SpiCfg.iActiveDelay,
             "iDelayDeactive":SpiCfg.iDelayDeactive
         }
     else:
         return {}
-def CH347SPI_ChangeCS(iIndex:int=0,iStatus:bool=False)->bool:
-    if LIBRARY.CH347SPI_ChangeCS(ctypes.c_ulong(iIndex),ctypes.c_ubyte(1 if iStatus else 0)):
-        return True
-    else:
-        return False
-def CH347SPI_SetChipSelect(iIndex:int=0,iEnableSelect:int=0,iChipSelect:int=0,iIsAutoDeativeCS:int=0,iActiveDelay:int=0,iDelayDeactive:int=0)->bool:
-    if LIBRARY.CH347SPI_SetChipSelect(ctypes.c_ulong(iIndex),ctypes.c_ushort(iEnableSelect),ctypes.c_ushort(iChipSelect),ctypes.c_ulong(iIsAutoDeativeCS),ctypes.c_ulong(iActiveDelay),ctypes.c_ulong(iDelayDeactive)):
-        return True
-    else:
-        return False
-def CH347SPI_Write(iIndex:int=0,iChipSelect:int=0,iWriteStep:int=1,ioBuffer:bytes=b"")->bool:
-    if LIBRARY.CH347SPI_Write(ctypes.c_ulong(iIndex),ctypes.c_ulong(iChipSelect),ctypes.c_ulong(len(ioBuffer)),ctypes.c_ulong(iWriteStep),ctypes.byref((ctypes.c_ubyte*len(ioBuffer))(*ioBuffer))):
-        return True
-    else:
-        return False
-def CH347SPI_Read(iIndex:int=0,iChipSelect:int=0,iLength:int=0,ioBuffer:bytes=b"")->bytes:
-    realIoBuffer=(ctypes.c_ubyte*max(iLength,len(ioBuffer)))(*ioBuffer)
-    if LIBRARY.CH347SPI_Read(ctypes.c_ulong(iIndex),ctypes.c_ulong(iChipSelect),ctypes.c_ulong(len(ioBuffer)),ctypes.byref(ctypes.c_ulong(iLength)),ctypes.byref(realIoBuffer)):
-        return bytes(realIoBuffer[0:iLength])
+CH347SPI_ChangeCS=LIBRARY.CH347SPI_ChangeCS
+CH347SPI_SetChipSelect=LIBRARY.CH347SPI_SetChipSelect
+def CH347SPI_Write(iIndex:int,iChipSelect:int,iWriteStep:int,ioBuffer:bytes)->bool:
+    return LIBRARY.CH347SPI_Write(iIndex,iChipSelect,len(ioBuffer),iWriteStep,byref((c_ubyte*len(ioBuffer))(*ioBuffer)))
+def CH347SPI_Read(iIndex:int,iChipSelect:int,iLength:int,ioBuffer:bytes)->bytes:
+    realIoBuffer=(c_ubyte*max(iLength,len(ioBuffer)))(*ioBuffer)
+    if LIBRARY.CH347SPI_Read(iIndex,iChipSelect,len(ioBuffer),byref(c_ulong(iLength)),byref(realIoBuffer)):
+        return bytes(realIoBuffer[:iLength])
     else:
         return b""
-def CH347SPI_WriteRead(iIndex:int=0,iChipSelect:int=0,ioBuffer:bytes=b"")->bytes:
-    realIoBuffer=(ctypes.c_ubyte*len(ioBuffer))(*ioBuffer)
-    if LIBRARY.CH347SPI_WriteRead(ctypes.c_ulong(iIndex),ctypes.c_ulong(iChipSelect),ctypes.c_ulong(len(ioBuffer)),ctypes.byref(realIoBuffer)):
-        return bytes(realIoBuffer)
+def CH347SPI_WriteRead(iIndex:int,iChipSelect:int,ioBuffer:bytes)->bytes:
+    realIoBuffer=(c_ubyte*len(ioBuffer))(*ioBuffer)
+    if LIBRARY.CH347SPI_WriteRead(iIndex,iChipSelect,len(ioBuffer),byref(realIoBuffer)):
+        return bytes(realIoBuffer[:])
     else:
         return b""
-def CH347StreamSPI4(iIndex:int=0,iChipSelect:int=0,ioBuffer:bytes=b"")->bytes:
-    realIoBuffer=(ctypes.c_ubyte*len(ioBuffer))(*ioBuffer)
-    if LIBRARY.CH347StreamSPI4(ctypes.c_ulong(iIndex),ctypes.c_ulong(iChipSelect),ctypes.c_ulong(len(ioBuffer)),ctypes.byref(realIoBuffer)):
-        return bytes(realIoBuffer)
+def CH347StreamSPI4(iIndex:int,iChipSelect:int,ioBuffer:bytes)->bytes:
+    realIoBuffer=(c_ubyte*len(ioBuffer))(*ioBuffer)
+    if LIBRARY.CH347StreamSPI4(iIndex,iChipSelect,len(ioBuffer),byref(realIoBuffer)):
+        return bytes(realIoBuffer[:])
     else:
         return b""

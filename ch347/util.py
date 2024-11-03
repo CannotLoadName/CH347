@@ -1,52 +1,20 @@
-import ctypes
-from ctypes.wintypes import HANDLE,MAX_PATH
-from typing import Tuple
-try:
-    LIBRARY=ctypes.WinDLL("CH347DLLA64.DLL")
-except FileNotFoundError:
-    try:
-        LIBRARY=ctypes.WinDLL("CH347DLL.DLL")
-    except FileNotFoundError:
-        raise ImportError("You have not installed the driver for CH347.")
-class DEV_INFOR(ctypes.Structure):
-    _fields_=[
-        ("iIndex",ctypes.c_ubyte),
-        ("DevicePath",ctypes.c_ubyte*MAX_PATH),
-        ("UsbClass",ctypes.c_ubyte),
-        ("FuncType",ctypes.c_ubyte),
-        ("DeviceID",ctypes.c_char*64),
-        ("ChipMode",ctypes.c_ubyte),
-        ("DevHandle",HANDLE),
-        ("BulkOutEndpMaxSize",ctypes.c_ushort),
-        ("BulkInEndpMaxSize",ctypes.c_ushort),
-        ("UsbSpeedType",ctypes.c_ubyte),
-        ("CH347IfNum",ctypes.c_ubyte),
-        ("DataUpEndp",ctypes.c_ubyte),
-        ("DataDnEndp",ctypes.c_ubyte),
-        ("ProductString",ctypes.c_char*64),
-        ("ManufacturerString",ctypes.c_char*64),
-        ("WriteTimeout",ctypes.c_ulong),
-        ("ReadTimeout",ctypes.c_ulong),
-        ("FuncDescStr",ctypes.c_char*64),
-        ("FirewareVer",ctypes.c_ubyte)
-    ]
-def CH347OpenDevice(DevI:int=0)->int:
-    return LIBRARY.CH347OpenDevice(ctypes.c_ulong(DevI))
-def CH347CloseDevice(iIndex:int=0)->bool:
-    if LIBRARY.CH347CloseDevice(ctypes.c_ulong(iIndex)):
-        return True
-    else:
-        return False
-def CH347GetDeviceInfor(iIndex:int=0)->dict:
+#-*-coding:utf-8;-*-
+from ctypes import byref,c_ubyte,c_ulong,string_at
+from typing import Callable,Tuple,Union
+from .core import LIBRARY,DEV_INFOR,mPCH347_NOTIFY_ROUTINE
+CH347OpenDevice=LIBRARY.CH347OpenDevice
+CH347CloseDevice=LIBRARY.CH347CloseDevice
+def CH347GetDeviceInfor(iIndex:int)->dict:
     DevInformation=DEV_INFOR()
-    if LIBRARY.CH347GetDeviceInfor(ctypes.c_ulong(iIndex),ctypes.byref(DevInformation)):
+    if LIBRARY.CH347GetDeviceInfor(iIndex,byref(DevInformation)):
         return {
             "iIndex":DevInformation.iIndex,
-            "DevicePath":ctypes.string_at(DevInformation.DevicePath),
+            "DevicePath":string_at(DevInformation.DevicePath),
             "UsbClass":DevInformation.UsbClass,
             "FuncType":DevInformation.FuncType,
             "DeviceID":DevInformation.DeviceID,
             "ChipMode":DevInformation.ChipMode,
+            "DevHandle":DevInformation.DevHandle,
             "BulkOutEndpMaxSize":DevInformation.BulkOutEndpMaxSize,
             "BulkInEndpMaxSize":DevInformation.BulkInEndpMaxSize,
             "UsbSpeedType":DevInformation.UsbSpeedType,
@@ -62,17 +30,36 @@ def CH347GetDeviceInfor(iIndex:int=0)->dict:
         }
     else:
         return {}
-def CH347GetVersion(iIndex:int=0)->Tuple[int,int,int,int]:
-    iDriverVer=ctypes.c_ubyte()
-    iDLLVer=ctypes.c_ubyte()
-    ibcdDevice=ctypes.c_ubyte()
-    iChipType=ctypes.c_ubyte()
-    if LIBRARY.CH347GetVersion(ctypes.c_ulong(iIndex),ctypes.byref(iDriverVer),ctypes.byref(iDLLVer),ctypes.byref(ibcdDevice),ctypes.byref(iChipType)):
+CH347GetChipType=LIBRARY.CH347GetChipType
+def CH347GetVersion(iIndex:int)->Tuple[int,int,int,int]:
+    iDriverVer=c_ubyte()
+    iDLLVer=c_ubyte()
+    ibcdDevice=c_ubyte()
+    iChipType=c_ubyte()
+    if LIBRARY.CH347GetVersion(iIndex,byref(iDriverVer),byref(iDLLVer),byref(ibcdDevice),byref(iChipType)):
         return iDriverVer.value,iDLLVer.value,ibcdDevice.value,iChipType.value
     else:
         return -1,-1,-1,-1
-def CH347SetTimeout(iIndex:int=0,iWriteTimeout:int=0xffffffff,iReadTimeout:int=0xffffffff)->bool:
-    if LIBRARY.CH347SetTimeout(ctypes.c_ulong(iIndex),ctypes.c_ulong(iWriteTimeout),ctypes.c_ulong(iReadTimeout)):
-        return True
+def CH347SetDeviceNotify(iIndex:int,iDeviceID:bytes)->Callable[[Union[Callable[[int],None],None]],Union[mPCH347_NOTIFY_ROUTINE,None]]:
+    def realCH347SetDeviceNotify(iNotifyRoutine:Union[Callable[[int],None],None])->Union[mPCH347_NOTIFY_ROUTINE,None]:
+        if iNotifyRoutine is None:
+            realINotifyRoutine=mPCH347_NOTIFY_ROUTINE()
+        else:
+            realINotifyRoutine=mPCH347_NOTIFY_ROUTINE(iNotifyRoutine)
+        if LIBRARY.CH347SetDeviceNotify(iIndex,iDeviceID,realINotifyRoutine):
+            return realINotifyRoutine
+    return realCH347SetDeviceNotify
+def CH347ReadData(iIndex:int,ioLength:int)->bytes:
+    oBuffer=(c_ubyte*ioLength)()
+    realIoLength=c_ulong(ioLength)
+    if LIBRARY.CH347ReadData(iIndex,byref(oBuffer),byref(realIoLength)):
+        return bytes(oBuffer[:realIoLength.value])
     else:
-        return False
+        return b""
+def CH347WriteData(iIndex:int,iBuffer:bytes)->int:
+    ioLength=c_ulong(len(iBuffer))
+    if LIBRARY.CH347WriteData(iIndex,byref((c_ubyte*len(iBuffer))(*iBuffer)),byref(ioLength)):
+        return ioLength.value
+    else:
+        return -1
+CH347SetTimeout=LIBRARY.CH347SetTimeout

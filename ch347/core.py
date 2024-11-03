@@ -1,0 +1,168 @@
+#-*-coding:utf-8;-*-
+from ctypes import c_bool,c_char,c_char_p,c_int,c_longlong,c_ubyte,c_ulong,c_ushort,c_void_p,POINTER,Structure,WinDLL,WINFUNCTYPE
+from ctypes.wintypes import DWORD,HANDLE,MAX_PATH
+from json import load
+from os.path import dirname,join
+from sys import maxsize
+if maxsize>0x100000000:
+    LIBRARY=WinDLL(load(open(join(dirname(__file__),"config.json"),"r",encoding="utf-8"))["x64"])
+else:
+    LIBRARY=WinDLL(load(open(join(dirname(__file__),"config.json"),"r",encoding="utf-8"))["x86"])
+class DEV_INFOR(Structure):
+    _fields_=(
+        ("iIndex",c_ubyte),
+        ("DevicePath",c_ubyte*MAX_PATH),
+        ("UsbClass",c_ubyte),
+        ("FuncType",c_ubyte),
+        ("DeviceID",c_char*64),
+        ("ChipMode",c_ubyte),
+        ("DevHandle",HANDLE),
+        ("BulkOutEndpMaxSize",c_ushort),
+        ("BulkInEndpMaxSize",c_ushort),
+        ("UsbSpeedType",c_ubyte),
+        ("CH347IfNum",c_ubyte),
+        ("DataUpEndp",c_ubyte),
+        ("DataDnEndp",c_ubyte),
+        ("ProductString",c_char*64),
+        ("ManufacturerString",c_char*64),
+        ("WriteTimeout",c_ulong),
+        ("ReadTimeout",c_ulong),
+        ("FuncDescStr",c_char*64),
+        ("FirewareVer",c_ubyte)
+    )
+class SPI_CONFIG(Structure):
+    _fields_=(
+        ("iMode",c_ubyte),
+        ("iClock",c_ubyte),
+        ("iByteOrder",c_ubyte),
+        ("iSpiWriteReadInterval",c_ushort),
+        ("iSpiOutDefaultData",c_ubyte),
+        ("iChipSelect",c_ulong),
+        ("CS1Polarity",c_ubyte),
+        ("CS2Polarity",c_ubyte),
+        ("iIsAutoDeativeCS",c_ushort),
+        ("iActiveDelay",c_ushort),
+        ("iDelayDeactive",c_ulong)
+    )
+mPCH347_NOTIFY_ROUTINE=WINFUNCTYPE(None,c_ulong)
+mPCH347_INT_ROUTINE=WINFUNCTYPE(None,POINTER(c_ubyte))
+LIBRARY.CH347OpenDevice.argtypes=(c_ulong,)
+LIBRARY.CH347OpenDevice.restype=HANDLE
+LIBRARY.CH347CloseDevice.argtypes=(c_ulong,)
+LIBRARY.CH347CloseDevice.restype=c_bool
+LIBRARY.CH347GetDeviceInfor.argtypes=(c_ulong,POINTER(DEV_INFOR))
+LIBRARY.CH347GetDeviceInfor.restype=c_bool
+LIBRARY.CH347GetChipType.argtypes=(c_ulong,)
+LIBRARY.CH347GetChipType.restype=c_ubyte
+LIBRARY.CH347GetVersion.argtypes=(c_ulong,POINTER(c_ubyte),POINTER(c_ubyte),POINTER(c_ubyte),POINTER(c_ubyte))
+LIBRARY.CH347GetVersion.restype=c_bool
+LIBRARY.CH347SetDeviceNotify.argtypes=(c_ulong,c_char_p,mPCH347_NOTIFY_ROUTINE)
+LIBRARY.CH347SetDeviceNotify.restype=c_bool
+LIBRARY.CH347ReadData.argtypes=(c_ulong,c_void_p,POINTER(c_ulong))
+LIBRARY.CH347ReadData.restype=c_bool
+LIBRARY.CH347WriteData.argtypes=(c_ulong,c_void_p,POINTER(c_ulong))
+LIBRARY.CH347WriteData.restype=c_bool
+LIBRARY.CH347SetTimeout.argtypes=(c_ulong,c_ulong,c_ulong)
+LIBRARY.CH347SetTimeout.restype=c_bool
+LIBRARY.CH347SPI_Init.argtypes=(c_ulong,POINTER(SPI_CONFIG))
+LIBRARY.CH347SPI_Init.restype=c_bool
+LIBRARY.CH347SPI_SetFrequency.argtypes=(c_ulong,c_ulong)
+LIBRARY.CH347SPI_SetFrequency.restype=c_bool
+LIBRARY.CH347SPI_SetDataBits.argtypes=(c_ulong,c_ubyte)
+LIBRARY.CH347SPI_SetDataBits.restype=c_bool
+LIBRARY.CH347SPI_GetCfg.argtypes=(c_ulong,POINTER(SPI_CONFIG))
+LIBRARY.CH347SPI_GetCfg.restype=c_bool
+LIBRARY.CH347SPI_ChangeCS.argtypes=(c_ulong,c_ubyte)
+LIBRARY.CH347SPI_ChangeCS.restype=c_bool
+LIBRARY.CH347SPI_SetChipSelect.argtypes=(c_ulong,c_ushort,c_ushort,c_ulong,c_ulong,c_ulong)
+LIBRARY.CH347SPI_SetChipSelect.restype=c_bool
+LIBRARY.CH347SPI_Write.argtypes=(c_ulong,c_ulong,c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347SPI_Write.restype=c_bool
+LIBRARY.CH347SPI_Read.argtypes=(c_ulong,c_ulong,c_ulong,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347SPI_Read.restype=c_bool
+LIBRARY.CH347SPI_WriteRead.argtypes=(c_ulong,c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347SPI_WriteRead.restype=c_bool
+LIBRARY.CH347StreamSPI4.argtypes=(c_ulong,c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347StreamSPI4.restype=c_bool
+LIBRARY.CH347Jtag_INIT.argtypes=(c_ulong,c_ubyte)
+LIBRARY.CH347Jtag_INIT.restype=c_bool
+LIBRARY.CH347Jtag_GetCfg.argtypes=(c_ulong,POINTER(c_ubyte))
+LIBRARY.CH347Jtag_GetCfg.restype=c_bool
+LIBRARY.CH347Jtag_TmsChange.argtypes=(c_ulong,POINTER(c_ubyte),c_ulong,c_ulong)
+LIBRARY.CH347Jtag_TmsChange.restype=c_bool
+LIBRARY.CH347Jtag_IoScan.argtypes=(c_ulong,POINTER(c_ubyte),c_ulong,c_bool)
+LIBRARY.CH347Jtag_IoScan.restype=c_bool
+LIBRARY.CH347Jtag_IoScanT.argtypes=(c_ulong,POINTER(c_ubyte),c_ulong,c_bool,c_bool)
+LIBRARY.CH347Jtag_IoScanT.restype=c_bool
+LIBRARY.CH347Jtag_Reset.argtypes=(c_ulong,)
+LIBRARY.CH347Jtag_Reset.restype=c_ulong
+LIBRARY.CH347Jtag_ResetTrst.argtypes=(c_ulong,c_bool)
+LIBRARY.CH347Jtag_ResetTrst.restype=c_bool
+LIBRARY.CH347Jtag_WriteRead.argtypes=(c_ulong,c_bool,c_ulong,c_void_p,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347Jtag_WriteRead.restype=c_bool
+LIBRARY.CH347Jtag_WriteRead_Fast.argtypes=(c_ulong,c_bool,c_ulong,c_void_p,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347Jtag_WriteRead_Fast.restype=c_bool
+LIBRARY.CH347Jtag_SwitchTapState.argtypes=(c_ubyte,)
+LIBRARY.CH347Jtag_SwitchTapState.restype=c_bool
+LIBRARY.CH347Jtag_ByteWriteDR.argtypes=(c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347Jtag_ByteWriteDR.restype=c_bool
+LIBRARY.CH347Jtag_ByteReadDR.argtypes=(c_ulong,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347Jtag_ByteReadDR.restype=c_bool
+LIBRARY.CH347Jtag_ByteWriteIR.argtypes=(c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347Jtag_ByteWriteIR.restype=c_bool
+LIBRARY.CH347Jtag_ByteReadIR.argtypes=(c_ulong,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347Jtag_ByteReadIR.restype=c_bool
+LIBRARY.CH347Jtag_BitWriteDR.argtypes=(c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347Jtag_BitWriteDR.restype=c_bool
+LIBRARY.CH347Jtag_BitWriteIR.argtypes=(c_ulong,c_ulong,c_void_p)
+LIBRARY.CH347Jtag_BitWriteIR.restype=c_bool
+LIBRARY.CH347Jtag_BitReadIR.argtypes=(c_ulong,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347Jtag_BitReadIR.restype=c_bool
+LIBRARY.CH347Jtag_BitReadDR.argtypes=(c_ulong,POINTER(c_ulong),c_void_p)
+LIBRARY.CH347Jtag_BitReadDR.restype=c_bool
+LIBRARY.CH347GPIO_Get.argtypes=(c_ulong,POINTER(c_ubyte),POINTER(c_ubyte))
+LIBRARY.CH347GPIO_Get.restype=c_bool
+LIBRARY.CH347GPIO_Set.argtypes=(c_ulong,c_ubyte,c_ubyte,c_ubyte)
+LIBRARY.CH347GPIO_Set.restype=c_bool
+LIBRARY.CH347SetIntRoutine.argtypes=(c_ulong,c_ubyte,c_ubyte,c_ubyte,c_ubyte,mPCH347_INT_ROUTINE)
+LIBRARY.CH347SetIntRoutine.restype=c_bool
+LIBRARY.CH347ReadInter.argtypes=(c_ulong,POINTER(c_ubyte))
+LIBRARY.CH347ReadInter.restype=c_bool
+LIBRARY.CH347AbortInter.argtypes=(c_ulong,)
+LIBRARY.CH347AbortInter.restype=c_bool
+LIBRARY.CH347StartIapFwUpate.argtypes=(c_ulong,c_ulong)
+LIBRARY.CH347StartIapFwUpate.restype=c_bool
+LIBRARY.CH347Uart_Open.argtypes=(c_ulong,)
+LIBRARY.CH347Uart_Open.restype=HANDLE
+LIBRARY.CH347Uart_Close.argtypes=(c_ulong,)
+LIBRARY.CH347Uart_Close.restype=c_bool
+LIBRARY.CH347Uart_SetDeviceNotify.argtypes=(c_ulong,c_char_p,mPCH347_NOTIFY_ROUTINE)
+LIBRARY.CH347Uart_SetDeviceNotify.restype=c_bool
+LIBRARY.CH347Uart_GetCfg.argtypes=(c_ulong,POINTER(c_ulong),POINTER(c_ubyte),POINTER(c_ubyte),POINTER(c_ubyte),POINTER(c_ubyte))
+LIBRARY.CH347Uart_GetCfg.restype=c_bool
+LIBRARY.CH347Uart_Init.argtypes=(c_ulong,DWORD,c_ubyte,c_ubyte,c_ubyte,c_ubyte)
+LIBRARY.CH347Uart_Init.restype=c_bool
+LIBRARY.CH347Uart_SetTimeout.argtypes=(c_ulong,c_ulong,c_ulong)
+LIBRARY.CH347Uart_SetTimeout.restype=c_bool
+LIBRARY.CH347Uart_Read.argtypes=(c_ulong,c_void_p,POINTER(c_ulong))
+LIBRARY.CH347Uart_Read.restype=c_bool
+LIBRARY.CH347Uart_Write.argtypes=(c_ulong,c_void_p,POINTER(c_ulong))
+LIBRARY.CH347Uart_Write.restype=c_bool
+LIBRARY.CH347Uart_QueryBufUpload.argtypes=(c_ulong,POINTER(c_longlong))
+LIBRARY.CH347Uart_QueryBufUpload.restype=c_bool
+LIBRARY.CH347Uart_GetDeviceInfor.argtypes=(c_ulong,POINTER(DEV_INFOR))
+LIBRARY.CH347Uart_GetDeviceInfor.restype=c_bool
+LIBRARY.CH347I2C_Set.argtypes=(c_ulong,c_ulong)
+LIBRARY.CH347I2C_Set.restype=c_bool
+LIBRARY.CH347I2C_SetStretch.argtypes=(c_ulong,c_bool)
+LIBRARY.CH347I2C_SetStretch.restype=c_bool
+LIBRARY.CH347I2C_SetDelaymS.argtypes=(c_ulong,c_ulong)
+LIBRARY.CH347I2C_SetDelaymS.restype=c_bool
+LIBRARY.CH347StreamI2C.argtypes=(c_ulong,c_ulong,c_void_p,c_ulong,c_void_p)
+LIBRARY.CH347StreamI2C.restype=c_bool
+LIBRARY.CH347StreamI2C_RetACK.argtypes=(c_ulong,c_ulong,c_void_p,c_ulong,c_void_p,POINTER(c_ulong))
+LIBRARY.CH347StreamI2C_RetACK.restype=c_bool
+LIBRARY.CH347ReadEEPROM.argtypes=(c_ulong,c_int,c_ulong,c_ulong,POINTER(c_ubyte))
+LIBRARY.CH347ReadEEPROM.restype=c_bool
+LIBRARY.CH347WriteEEPROM.argtypes=(c_ulong,c_int,c_ulong,c_ulong,POINTER(c_ubyte))
+LIBRARY.CH347WriteEEPROM.restype=c_bool
